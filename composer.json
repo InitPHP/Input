@@ -1,0 +1,26 @@
+{
+    "name": "initphp/input",
+    "description": "InitPHP Input Library",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "InitPHP\\Input\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Muhammet ŞAFAK",
+            "email": "info@muhammetsafak.com.tr",
+            "role": "Developer",
+            "homepage": "https://www.muhammetsafak.com.tr"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=7.4",
+        "ext-json": "*",
+        "initphp/parameterbag": "^1.0",
+        "initphp/validation": "^1.0"
+    }
+}
