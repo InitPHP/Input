@@ -7,7 +7,7 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 InitPHP
  * @license    http://initphp.github.io/license.txt  MIT
- * @version    1.0
+ * @version    1.0.1
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -22,6 +22,8 @@ use function is_array;
 use function array_keys;
 use function json_decode;
 use function file_get_contents;
+use function explode;
+use function strpos;
 
 /**
  * @property-read null|ParameterBag $get
@@ -252,9 +254,30 @@ final class Stack
         if(isset(self::$PBPost)){
             return;
         }
-        self::$PBPost = new ParameterBag(($_POST ?? []), [
-            'isMulti'   => false,
-        ]);
+        $bagOptions = ['isMulti' => false];
+        if(isset($_POST) && !empty($_POST)){
+            self::$PBPost = new ParameterBag($_POST, $bagOptions);
+            return;
+        }
+        if(isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $postInputs = @file_get_contents("php://input");
+            if(empty($postInputs) || strpos($postInputs, '&') === FALSE){
+                self::$PBPost = new ParameterBag([], $bagOptions);
+                return;
+            }
+            $data = [];
+            $parse = explode('&', $postInputs);
+            foreach ($parse as $input) {
+                if(strpos($input, '=') === FALSE){
+                    continue;
+                }
+                $in = explode('=', $input, 2);
+                $data[$in[0]] = $in[1];
+            }
+            self::$PBRaw = new ParameterBag($data, $bagOptions);
+            return;
+        }
+        self::$PBPost = new ParameterBag([], $bagOptions);
     }
 
     private function filesParameterBagStart(): void
