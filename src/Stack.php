@@ -38,10 +38,18 @@ final class Stack
 
     public function __destruct()
     {
-        $this->validation->clear();
-        $this->get->close();
-        $this->post->close();
-        $this->raw->close();
+        if(isset($this->validation)){
+            $this->validation->clear();
+        }
+        if(isset($this->get)){
+            $this->get->close();
+        }
+        if(isset($this->post)){
+            $this->post->close();
+        }
+        if(isset($this->raw)){
+            $this->raw->close();
+        }
     }
 
     public function get(string $key, $default = null, ?array $validation = null)
