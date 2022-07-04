@@ -7,7 +7,7 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 InitPHP
  * @license    http://initphp.github.io/license.txt  MIT
- * @version    1.0
+ * @version    1.0.2
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -16,10 +16,7 @@ declare(strict_types=1);
 namespace InitPHP\Input;
 
 /**
- * @property-read null|\InitPHP\ParameterBag\ParameterBag $get
- * @property-read null|\InitPHP\ParameterBag\ParameterBag $post
- * @property-read null|\InitPHP\ParameterBag\ParameterBag $raw
- * @property-read null|\InitPHP\ParameterBag\ParameterBag $files
+ * @mixin Stack
  * @method static mixed get(string $key, mixed $default = null, ?array $validation = null)
  * @method static mixed getPost(string $key, mixed $default = null, ?array $validation = null)
  * @method static mixed getRaw(string $key, mixed $default = null, ?array $validation = null)
@@ -34,14 +31,12 @@ namespace InitPHP\Input;
  * @method static mixed postGet(string $key, mixed $default = null, ?array $validation = null)
  * @method static mixed postRaw(string $key, mixed $default = null, ?array $validation = null)
  * @method static mixed postGetRaw(string $key, mixed $default = null, ?array $validation = null)
- * @method static mixed postRawGet(string $key, mixed $default = null, ?array $validation = null)
- * @method static array|mixed files(string $key, mixed $default = null)
+ * @method static mixed postRawGet(string $key, mixed $default = null, ?array $validation = null))
  * @method static bool hasGet(string $key)
  * @method static bool hasRaw(string $key)
  * @method static bool hasPost(string $key)
- * @method static bool hasFiles(string $key)
  */
-class Input
+final class Input
 {
 
     protected static Stack $stack;
@@ -51,9 +46,11 @@ class Input
         self::getStackInstance();
     }
 
-    public function __get($name)
+    public function __destruct()
     {
-        return self::getStackInstance()->__get($name);
+        if(isset(self::$stack)){
+            self::$stack->__destruct();
+        }
     }
 
     public function __call($name, $arguments)

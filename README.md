@@ -19,6 +19,8 @@ composer require initphp/input
 
 ## Usage
 
+**Example :**
+
 ```php
 require_once "vendor/autoload.php";
 use \InitPHP\Input\Input;
@@ -26,6 +28,8 @@ use \InitPHP\Input\Input;
 // echo isset($_GET['name']) ? $_GET['name'] : 'John';
 echo Input::get('name', 'John');
 ```
+
+**Example :**
 
 ```php
 require_once "vendor/autoload.php";
@@ -41,6 +45,23 @@ use \InitPHP\Input\Input;
  * }
  */
 $year = Input::getPost('year', 2015, ['range(1970...2070)']);
+```
+
+**Example :**
+
+```php
+require_once "vendor/autoload.php";
+use \InitPHP\Input\Input;
+
+/**
+ * if(isset($_POST['password']) && isset($_POST['password_retype']) && !empty($_POST['password']) && $_POST['password'] == $_POST['password_retype']){
+ *      $password = $_POST['password'];
+ * }else{
+ *      $password = null;
+ * }
+ */
+ 
+$password = Input::post('password', null, ['required', 'again(password_retype)'])
 ```
 
 ## Methods
@@ -63,14 +84,6 @@ Data from reading `php://input`.
 
 ```php
 public function raw(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-#### `Input::files()`
-
-**Note :** Returns the `$_FILES` data, normalizing if necessary.
-
-```php
-public function files(string $key, mixed $default = null): array|mixed;
 ```
 
 ### Getting Input with Priority
@@ -197,14 +210,6 @@ Case-insensitively, it queries the body inputs for a key value.
 
 ```php
 public function hasRaw(string $key): bool;
-```
-
-#### `Input::hasFiles()`
-
-It does something like `isset($_FILES['key'])` , case-insensitively.
-
-```php
-public function hasFiles(string $key): bool;
 ```
 
 ## Credits

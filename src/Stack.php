@@ -7,7 +7,7 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 InitPHP
  * @license    http://initphp.github.io/license.txt  MIT
- * @version    1.0.1
+ * @version    1.0.2
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -18,311 +18,221 @@ namespace InitPHP\Input;
 use \InitPHP\ParameterBag\ParameterBag;
 use \InitPHP\Validation\Validation;
 
-use function is_array;
-use function array_keys;
 use function json_decode;
 use function file_get_contents;
 use function explode;
 use function strpos;
 
-/**
- * @property-read null|ParameterBag $get
- * @property-read null|ParameterBag $post
- * @property-read null|ParameterBag $raw
- * @property-read null|ParameterBag $files
- */
 final class Stack
 {
 
-    protected static ParameterBag $PBGet;
-    protected static ParameterBag $PBPost;
-    protected static ParameterBag $PBRaw;
-    protected static ParameterBag $PBFiles;
-    protected static Validation $validation;
+    protected ParameterBag $get;
+    protected ParameterBag $post;
+    protected ParameterBag $raw;
+    protected Validation $validation;
 
     public function __construct()
     {
-        $this->getParameterBagStart();
-        $this->postParameterBagStart();
-        $this->rawParameterBagStart();
-        $this->filesParameterBagStart();
+        $this->resolve();
     }
 
     public function __destruct()
     {
-        if(isset(self::$validation)){
-            self::$validation->clear();
-        }
-        if(isset(self::$PBFiles)){
-            self::$PBFiles->close();
-        }
-        if(isset(self::$PBGet)){
-            self::$PBGet->close();
-        }
-        if(isset(self::$PBPost)){
-            self::$PBPost->close();
-        }
-        if(isset(self::$PBRaw)){
-            self::$PBRaw->close();
-        }
-    }
-
-    public function __get($name)
-    {
-        switch (strtolower($name)) {
-            case 'get':
-                return self::$PBGet ?? null;
-            case 'post':
-                return self::$PBPost ?? null;
-            case 'files':
-                return self::$PBFiles ?? null;
-            case 'raw':
-                return self::$PBRaw ?? null;
-            default:
-                return null;
-        }
+        $this->validation->clear();
+        $this->get->close();
+        $this->post->close();
+        $this->raw->close();
     }
 
     public function get(string $key, $default = null, ?array $validation = null)
     {
-        $data = self::$PBGet->get($key, $default);
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        if(!$this->get->has($key)){
+            return $default;
+        }
+        $data = $this->get->get($key, $default);
+        if(empty($validation)){
+            return $data;
+        }
+        return $this->validData($this->get->all(), $key, $validation) ? $data : $default;
     }
 
     public function post(string $key, $default = null, ?array $validation = null)
     {
-        $data = self::$PBPost->get($key, $default);
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        if(!$this->post->has($key)){
+            return $default;
+        }
+        $data = $this->post->get($key, $default);
+        if(empty($validation)){
+            return $data;
+        }
+        return $this->validData($this->post->all(), $key, $validation) ? $data : $default;
     }
 
     public function raw(string $key, $default = null, ?array $validation = null)
     {
-        $data = self::$PBRaw->get($key, $default);
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
-    }
-
-    public function files(string $key, $default = null)
-    {
-        $this->filesParameterBagStart();
-        return self::$PBFiles->get($key, $default);
+        if(!$this->raw->has($key)){
+            return $default;
+        }
+        $data = $this->raw->get($key, $default);
+        if(empty($validation)){
+            return $data;
+        }
+        return $this->validData($this->raw->all(), $key, $validation) ? $data : $default;
     }
 
     public function getPost(string $key, $default = null, ?array $validation = null)
     {
-        $data = self::$PBGet->has($key) ? self::$PBGet->get($key) : self::$PBPost->get($key, $default);
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->get->has($key) ? $this->get($key, $default, $validation) : $this->post($key, $default, $validation);
     }
 
     public function getRaw(string $key, $default = null, ?array $validation = null)
     {
-        $data = self::$PBGet->has($key) ? self::$PBGet->get($key) : self::$PBRaw->get($key, $default);
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->get->has($key) ? $this->get($key, $default, $validation) : $this->raw($key, $default, $validation);
     }
 
     public function getPostRaw(string $key, $default = null, ?array $validation = null)
     {
-        if(self::$PBGet->has($key)){
-            $data = self::$PBGet->get($key);
-        }else{
-            $data = self::$PBPost->has($key) ? self::$PBPost->get($key) : self::$PBRaw->get($key, $default);
+        if($this->get->has($key)){
+            return $this->get($key, $default, $validation);
         }
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->post->has($key) ? $this->post($key, $default, $validation) : $this->raw($key, $default, $validation);
     }
 
     public function getRawPost(string $key, $default = null, ?array $validation = null)
     {
-        if(self::$PBGet->has($key)){
-            $data = self::$PBGet->get($key);
-        }else{
-            $data = self::$PBRaw->has($key) ? self::$PBRaw->get($key) : self::$PBPost->get($key, $default);
+        if($this->get->has($key)){
+            return $this->get($key, $default, $validation);
         }
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->raw->has($key) ? $this->raw($key, $default, $validation) : $this->post($key, $default, $validation);
     }
 
     public function postGet(string $key, $default = null, ?array $validation = null)
     {
-        $data = self::$PBPost->has($key) ? self::$PBPost->get($key) : self::$PBGet->get($key, $default);
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->post->has($key) ? $this->post($key, $default, $validation) : $this->get($key, $default, $validation);
     }
 
     public function postRaw(string $key, $default = null, ?array $validation = null)
     {
-        $data = self::$PBPost->has($key) ? self::$PBPost->get($key) : self::$PBRaw->get($key, $default);
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->post->has($key) ? $this->post($key, $default, $validation) : $this->raw($key, $default, $validation);
     }
 
     public function postGetRaw(string $key, $default = null, ?array $validation = null)
     {
-        if(self::$PBPost->has($key)){
-            $data = self::$PBPost->get($key);
-        }else{
-            $data = self::$PBGet->has($key) ? self::$PBGet->get($key) : self::$PBRaw->get($key, $default);
+        if($this->post->has($key)){
+            return $this->post($key, $default, $validation);
         }
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->get->has($key) ? $this->get($key, $default, $validation) : $this->raw($key, $default, $validation);
     }
 
     public function postRawGet(string $key, $default = null, ?array $validation = null)
     {
-        if(self::$PBPost->has($key)){
-            $data = self::$PBPost->get($key);
-        }else{
-            $data = self::$PBRaw->has($key) ? self::$PBRaw->get($key) : self::$PBGet->get($key, $default);
+        if($this->post->has($key)){
+            return $this->post($key, $default, $validation);
         }
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->raw->has($key) ? $this->raw($key, $default, $validation) : $this->get($key, $default, $validation);
     }
 
     public function rawGet(string $key, $default = null, ?array $validation = null)
     {
-        $data = self::$PBRaw->has($key) ? self::$PBRaw->get($key) : self::$PBGet->get($key, $default);
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->raw->has($key) ? $this->raw($key, $default, $validation) : $this->get($key, $default, $validation);
     }
 
     public function rawPost(string $key, $default = null, ?array $validation = null)
     {
-        $data = self::$PBRaw->has($key) ? self::$PBRaw->get($key) : self::$PBPost->get($key, $default);
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->raw->has($key) ? $this->raw($key, $default, $validation) : $this->post($key, $default, $validation);
     }
 
     public function rawGetPost(string $key, $default = null, ?array $validation = null)
     {
-        if(self::$PBRaw->has($key)){
-            $data = self::$PBRaw->get($key);
-        }else{
-            $data = self::$PBGet->has($key) ? self::$PBGet->get($key) : self::$PBPost->get($key, $default);
+        if($this->raw->has($key)){
+            return $this->raw($key, $default, $validation);
         }
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->get->has($key) ? $this->get($key, $default, $validation) : $this->post($key, $default, $validation);
     }
 
     public function rawPostGet(string $key, $default = null, ?array $validation = null)
     {
-        if(self::$PBRaw->has($key)){
-            $data = self::$PBRaw->get($key);
-        }else{
-            $data = self::$PBPost->has($key) ? self::$PBPost->get($key) : self::$PBGet->get($key, $default);
+        if($this->raw->has($key)){
+            return $this->raw($key, $default, $validation);
         }
-        return empty($validation) ? $data : $this->validData($data, $validation, $default);
+        return $this->post->has($key) ? $this->post($key, $default, $validation) : $this->get($key, $default, $validation);
     }
 
     public function hasGet(string $key): bool
     {
-        return self::$PBGet->has($key);
+        return $this->get->has($key);
     }
 
     public function hasPost(string $key): bool
     {
-        return self::$PBPost->has($key);
+        return $this->post->has($key);
     }
 
     public function hasRaw(string $key): bool
     {
-        return self::$PBRaw->has($key);
+        return $this->raw->has($key);
     }
 
-    public function hasFiles(string $key): bool
+    protected function getValidation(): Validation
     {
-        $this->filesParameterBagStart();
-        return self::$PBFiles->has($key);
-    }
-
-    private function getValidation(): Validation
-    {
-        if(!isset(self::$validation)){
-            self::$validation = new Validation();
+        if(!isset($this->validation)){
+            $this->validation = new Validation();
         }
-        return self::$validation;
+        return $this->validation;
     }
 
-    private function validData($data, array $validation, $default)
+    private function validData(array $data, string $key, array $validation): bool
     {
-        $validate = $this->getValidation()->setData(['data' => $data]);
-        $validate->rule('data', $validation);
-        return $validate->validation() ? $data : $default;
+        $validate = $this->getValidation()->setData($data);
+        $validate->rule($key, $validation);
+        return $validate->validation() !== FALSE;
     }
 
-    private function getParameterBagStart(): void
+    private function resolve(): void
     {
-        if(isset(self::$PBGet)){
-            return;
-        }
-        self::$PBGet = new ParameterBag(($_GET ?? []), [
+        $this->get = new ParameterBag(($_GET ?? []), [
             'isMulti'   => false
         ]);
-    }
 
-    private function postParameterBagStart(): void
-    {
-        if(isset(self::$PBPost)){
-            return;
-        }
-        $bagOptions = ['isMulti' => false];
         if(isset($_POST) && !empty($_POST)){
-            self::$PBPost = new ParameterBag($_POST, $bagOptions);
-            return;
+            $this->post = new ParameterBag($_POST, [
+                'isMulti'   => false
+            ]);
         }
-        if(isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            $postInputs = @file_get_contents("php://input");
-            if(empty($postInputs) || strpos($postInputs, '&') === FALSE){
-                self::$PBPost = new ParameterBag([], $bagOptions);
-                return;
-            }
-            $data = [];
-            $parse = explode('&', $postInputs);
-            foreach ($parse as $input) {
-                if(strpos($input, '=') === FALSE){
-                    continue;
+
+        if(($inputs = @file_get_contents("php://input")) !== FALSE){
+            $raws = json_decode($inputs, true);
+            $this->raw = new ParameterBag((!empty($raws) ? $raws : []) , [
+                'isMulti'   => false
+            ]);
+
+            if(
+                ($raws === null || $raws === FALSE)
+                && !isset($this->post)
+                && isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST'
+                && !empty($inputs)
+                && (strpos($inputs, '&') !== FALSE || strpos($inputs, '=') !== FALSE)
+            ){
+                $posts = [];
+                $parse = explode('&', $inputs);
+                foreach ($parse as $argument) {
+                    if(strpos($argument, '=') === FALSE){
+                        continue;
+                    }
+                    $value = explode('=', $argument, 2);
+                    $posts[$value[0]] = $value[1];
                 }
-                $in = explode('=', $input, 2);
-                $data[$in[0]] = $in[1];
-            }
-            self::$PBRaw = new ParameterBag($data, $bagOptions);
-            return;
-        }
-        self::$PBPost = new ParameterBag([], $bagOptions);
-    }
-
-    private function filesParameterBagStart(): void
-    {
-        if(isset(self::$PBFiles)){
-            return;
-        }
-        $data = [];
-        if(isset($_FILES) && !empty($_FILES)){
-            foreach ($_FILES as $key => $value) {
-                if(!is_array($value['name'])){
-                    $data[$key] = $value;
-                    continue;
-                }
-                $data[$key] = $this->normalizeFiles($value);
+                $this->post = new ParameterBag($posts, [
+                    'isMulti'   => false,
+                ]);
             }
         }
-        self::$PBFiles = new ParameterBag($data, [
-            'isMulti'   => false,
-        ]);
-    }
 
-    private function rawParameterBagStart(): void
-    {
-        if(isset(self::$PBRaw)){
-            return;
+        if(!isset($this->post)){
+            $this->post = new ParameterBag([], [
+                'isMulti'   => false
+            ]);
         }
-        $rawInputs = @file_get_contents("php://input");
-        $data = empty($rawInputs) ? [] : (array)json_decode($rawInputs, true);
-        self::$PBRaw = new ParameterBag($data, [
-            'isMulti'   => false,
-        ]);
-    }
-
-    private function normalizeFiles( $files ): array
-    {
-        $res = [];
-        $mainKeys = array_keys($files);
-        $fileKeys = array_keys($files['name']);
-        foreach ($fileKeys as $fileId) {
-            foreach ($mainKeys as $key) {
-                $res[$fileId][$key] = $files[$key][$fileId];
-            }
-        }
-        return $res;
     }
 
 }
