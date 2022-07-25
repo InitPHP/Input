@@ -1,22 +1,22 @@
 <?php
 /**
- * Input.php
+ * Inputs.php
  *
- * This file is part of InitPHP.
+ * This file is part of Input.
  *
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
- * @copyright  Copyright © 2022 InitPHP
- * @license    http://initphp.github.io/license.txt  MIT
- * @version    1.0.2
+ * @copyright  Copyright © 2022 Muhammet ŞAFAK
+ * @license    ./LICENSE  MIT
+ * @version    1.1
  * @link       https://www.muhammetsafak.com.tr
  */
 
 declare(strict_types=1);
 
-namespace InitPHP\Input;
+namespace InitPHP\Input\Facede;
 
 /**
- * @mixin Stack
+ * @mixin \InitPHP\Input\Inputs
  * @method static mixed get(string $key, mixed $default = null, ?array $validation = null)
  * @method static mixed getPost(string $key, mixed $default = null, ?array $validation = null)
  * @method static mixed getRaw(string $key, mixed $default = null, ?array $validation = null)
@@ -36,39 +36,28 @@ namespace InitPHP\Input;
  * @method static bool hasRaw(string $key)
  * @method static bool hasPost(string $key)
  */
-final class Input
+class Inputs
 {
 
-    protected static Stack $stack;
+    /** @var \InitPHP\Input\Inputs */
+    private static $Inputs;
 
-    public function __construct()
+    private static function getInputInstance(): \InitPHP\Input\Inputs
     {
-        self::getStackInstance();
-    }
-
-    public function __destruct()
-    {
-        if(isset(self::$stack)){
-            self::$stack->__destruct();
+        if(!isset(self::$Inputs)){
+            self::$Inputs = new \InitPHP\Input\Inputs();
         }
+        return self::$Inputs;
     }
 
     public function __call($name, $arguments)
     {
-        return self::getStackInstance()->{$name}(...$arguments);
+        return self::getInputInstance()->{$name}(...$arguments);
     }
 
     public static function __callStatic($name, $arguments)
     {
-        return self::getStackInstance()->{$name}(...$arguments);
-    }
-
-    protected static function getStackInstance(): Stack
-    {
-        if(!isset(self::$stack)){
-            self::$stack = new Stack();
-        }
-        return self::$stack;
+        return self::getInputInstance()->{$name}(...$arguments);
     }
 
 }

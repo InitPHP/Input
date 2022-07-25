@@ -1,13 +1,13 @@
 # InitPHP Input
 
-It is a simple library developed to retrieve user inputs by prioritizing or verifying.
+Is a library for prioritizing or verifying Get, Post and Raw inputs.
 
 [![Latest Stable Version](http://poser.pugx.org/initphp/input/v)](https://packagist.org/packages/initphp/input) [![Total Downloads](http://poser.pugx.org/initphp/input/downloads)](https://packagist.org/packages/initphp/input) [![Latest Unstable Version](http://poser.pugx.org/initphp/input/v/unstable)](https://packagist.org/packages/initphp/input) [![License](http://poser.pugx.org/initphp/input/license)](https://packagist.org/packages/initphp/input) [![PHP Version Require](http://poser.pugx.org/initphp/input/require/php)](https://packagist.org/packages/initphp/input)
 
 
 ## Requirements
 
-- PHP 7.4 or higher
+- PHP 7.2 or later
 - [InitPHP ParameterBag](https://github.com/InitPHP/ParameterBag)
 - [InitPHP Validation](https://github.com/InitPHP/Validation)
 
@@ -23,7 +23,7 @@ composer require initphp/input
 
 ```php
 require_once "vendor/autoload.php";
-use \InitPHP\Input\Input;
+use \InitPHP\Input\Facede\Inputs as Input;
 
 // echo isset($_GET['name']) ? $_GET['name'] : 'John';
 echo Input::get('name', 'John');
@@ -33,7 +33,7 @@ echo Input::get('name', 'John');
 
 ```php
 require_once "vendor/autoload.php";
-use \InitPHP\Input\Input;
+use \InitPHP\Input\Facede\Inputs as Input;
 
 /**
  * if(isset($_GET['year']) && $_GET['year'] >= 1970 && $_GET['year'] <= 2070){
@@ -51,7 +51,7 @@ $year = Input::getPost('year', 2015, ['range(1970...2070)']);
 
 ```php
 require_once "vendor/autoload.php";
-use \InitPHP\Input\Input;
+use \InitPHP\Input\Facede\Inputs as Input;
 
 /**
  * if(isset($_POST['password']) && isset($_POST['password_retype']) && !empty($_POST['password']) && $_POST['password'] == $_POST['password_retype']){
@@ -66,19 +66,19 @@ $password = Input::post('password', null, ['required', 'again(password_retype)']
 
 ## Methods
 
-#### `Input::get()`
+#### `Inputs::get()`
 
 ```php
 public function get(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::post()`
+#### `Inputs::post()`
 
 ```php
 public function post(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::raw()`
+#### `Inputs::raw()`
 
 Data from reading `php://input`.
 
@@ -88,7 +88,7 @@ public function raw(string $key, mixed $default = null, ?array $validation = nul
 
 ### Getting Input with Priority
 
-#### `Input::getPost()`
+#### `Inputs::getPost()`
 
 `$_GET` -> `$_POST`
 
@@ -96,7 +96,7 @@ public function raw(string $key, mixed $default = null, ?array $validation = nul
 public function getPost(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::getRaw()`
+#### `Inputs::getRaw()`
 
 `$_GET` -> `php://input`
 
@@ -104,7 +104,7 @@ public function getPost(string $key, mixed $default = null, ?array $validation =
 public function getRaw(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::getPostRaw()`
+#### `Inputs::getPostRaw()`
 
 `$_GET` -> `$_POST` -> `php://input`
 
@@ -112,7 +112,7 @@ public function getRaw(string $key, mixed $default = null, ?array $validation = 
 public function getPostRaw(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::getRawPost()`
+#### `Inputs::getRawPost()`
 
 `$_GET` -> `php://input` -> `$_POST`
 
@@ -120,7 +120,7 @@ public function getPostRaw(string $key, mixed $default = null, ?array $validatio
 public function getRawPost(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::postGet()`
+#### `Inputs::postGet()`
 
 `$_POST` -> `$_GET`
 
@@ -128,7 +128,7 @@ public function getRawPost(string $key, mixed $default = null, ?array $validatio
 public function postGet(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::postRaw()`
+#### `Inputs::postRaw()`
 
 `$_POST` -> `php://input`
 
@@ -136,7 +136,7 @@ public function postGet(string $key, mixed $default = null, ?array $validation =
 public function postRaw(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::postGetRaw()`
+#### `Inputs::postGetRaw()`
 
 `$_POST` -> `$_GET` -> `php://input`
 
@@ -144,7 +144,7 @@ public function postRaw(string $key, mixed $default = null, ?array $validation =
 public function postGetRaw(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::postRawGet()`
+#### `Inputs::postRawGet()`
 
 `$_POST` -> `php://input` -> `$_GET`
 
@@ -152,7 +152,7 @@ public function postGetRaw(string $key, mixed $default = null, ?array $validatio
 public function postRawGet(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::rawGet()`
+#### `Inputs::rawGet()`
 
 `php://input` -> `$_GET`
 
@@ -160,7 +160,7 @@ public function postRawGet(string $key, mixed $default = null, ?array $validatio
 public function rawGet(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::rawPost()`
+#### `Inputs::rawPost()`
 
 `php://input` -> `$_POST`
 
@@ -168,7 +168,7 @@ public function rawGet(string $key, mixed $default = null, ?array $validation = 
 public function rawPost(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::rawGetPost()`
+#### `Inputs::rawGetPost()`
 
 `php://input` -> `$_GET` -> `$_POST`
 
@@ -176,7 +176,7 @@ public function rawPost(string $key, mixed $default = null, ?array $validation =
 public function rawGetPost(string $key, mixed $default = null, ?array $validation = null): mixed;
 ```
 
-#### `Input::rawPostGet()`
+#### `Inputs::rawPostGet()`
 
 `php://input` -> `$_POST` -> `$_GET`
 
@@ -188,7 +188,7 @@ public function rawPostGet(string $key, mixed $default = null, ?array $validatio
 
 Checks to see if the requested entry has been declared.
 
-#### `Input::hasGet()`
+#### `Inputs::hasGet()`
 
 It does something like `isset($_GET['key'])` , case-insensitively.
 
@@ -196,7 +196,7 @@ It does something like `isset($_GET['key'])` , case-insensitively.
 public function hasGet(string $key): bool;
 ```
 
-#### `Input::hasPost()`
+#### `Inputs::hasPost()`
 
 It does something like `isset($_POST['key'])` , case-insensitively.
 
@@ -204,7 +204,7 @@ It does something like `isset($_POST['key'])` , case-insensitively.
 public function hasPost(string $key): bool;
 ```
 
-#### `Input::hasRaw()`
+#### `Inputs::hasRaw()`
 
 Case-insensitively, it queries the body inputs for a key value.
 
