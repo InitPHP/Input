@@ -23,7 +23,7 @@ composer require initphp/input
 
 ```php
 require_once "vendor/autoload.php";
-use \InitPHP\Input\Facede\Inputs as Input;
+use \InitPHP\Input\Facade\Inputs as Input;
 
 // echo isset($_GET['name']) ? $_GET['name'] : 'John';
 echo Input::get('name', 'John');
@@ -33,7 +33,7 @@ echo Input::get('name', 'John');
 
 ```php
 require_once "vendor/autoload.php";
-use \InitPHP\Input\Facede\Inputs as Input;
+use \InitPHP\Input\Facade\Inputs as Input;
 
 /**
  * if(isset($_GET['year']) && $_GET['year'] >= 1970 && $_GET['year'] <= 2070){
@@ -51,7 +51,7 @@ $year = Input::getPost('year', 2015, ['range(1970...2070)']);
 
 ```php
 require_once "vendor/autoload.php";
-use \InitPHP\Input\Facede\Inputs as Input;
+use \InitPHP\Input\Facade\Inputs as Input;
 
 /**
  * if(isset($_POST['password']) && isset($_POST['password_retype']) && !empty($_POST['password']) && $_POST['password'] == $_POST['password_retype']){

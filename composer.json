@@ -20,7 +20,7 @@
     "require": {
         "php": ">=7.2",
         "ext-json": "*",
-        "initphp/parameterbag": "^1.0",
+        "initphp/parameterbag": "^1.1",
         "initphp/validation": "^1.0"
     }
 }

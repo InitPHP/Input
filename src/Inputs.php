@@ -7,7 +7,7 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 Muhammet ŞAFAK
  * @license    ./LICENSE  MIT
- * @version    1.1
+ * @version    1.2
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -33,16 +33,8 @@ class Inputs
     /** @var Validation */
     private static $validation;
 
-    /** @var string|false */
-    private static $InputBody;
-
     public function __construct()
     {
-        if(!isset(self::$InputBody)){
-            if((self::$InputBody = @\file_get_contents('php://input')) !== FALSE){
-                self::$InputBody = \trim(self::$InputBody);
-            }
-        }
         $this->getParameterBagBoot();
         $this->postParameterBagBoot();
         $this->rawParameterBagBoot();
@@ -212,7 +204,7 @@ class Inputs
         if(isset(self::$get)){
             return;
         }
-        self::$get = new ParameterBag(($_GET ?? []), ['isMulti' => false]);
+        self::$get = new ParameterBag(!empty($_GET) ? $_GET : [], ['isMulti' => false]);
     }
 
     private function postParameterBagBoot()
@@ -220,35 +212,7 @@ class Inputs
         if(isset(self::$post)){
             return;
         }
-        if(isset($_POST) && !empty($_POST)){
-            self::$post = new ParameterBag($_POST, [
-                'isMulti'   => false
-            ]);
-            return;
-        }
-        if(empty(self::$InputBody)){
-            self::$post = new ParameterBag([], ['isMulti' => false]);
-            return;
-        }
-        $bodyFirstChar = \substr(self::$InputBody, 0, 1);
-        if(isset($_SERVER['REQUEST_METHOD'])
-            && $_SERVER['REQUEST_METHOD'] == 'POST'
-            && $bodyFirstChar !== '{' && $bodyFirstChar !== '['
-        ){
-            $data = [];
-            $split = \explode('&', self::$InputBody);
-            foreach ($split as $argument) {
-                if(\strpos($argument, '=') === FALSE){
-                    $data[$argument] = '';
-                    continue;
-                }
-                $parse = \explode('=', $argument, 2);
-                $data[$parse[0]] = $parse[1];
-            }
-            self::$post = new ParameterBag($data, ['isMulti' => false]);
-            return;
-        }
-        self::$post = new ParameterBag([], ['isMulti' => false]);
+        self::$post = new ParameterBag(!empty($_POST) ? $_POST : [], ['isMulti' => false]);
     }
 
     private function rawParameterBagBoot()
@@ -256,16 +220,15 @@ class Inputs
         if(isset(self::$raw)){
             return;
         }
-        if(self::$InputBody === FALSE){
-            self::$raw = new ParameterBag([], ['isMulti' => false]);
-            return;
+        $body = @\file_get_contents('php://input');
+
+        if ($body === FALSE) {
+            $data = [];
+        } else {
+            $data = \json_decode($body, true);
         }
-        $body = \json_decode(self::$InputBody, true);
-        if(!\is_array($body) || empty($body)){
-            self::$raw = new ParameterBag([], ['isMulti' => false]);
-            return;
-        }
-        self::$raw = new ParameterBag($body, ['isMulti' => false]);
+
+        self::$raw = new ParameterBag($data ? $data : [], ['isMulti' => false]);
     }
 
 }
