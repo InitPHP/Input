@@ -1,215 +1,150 @@
 # InitPHP Input
 
-Is a library for prioritizing or verifying Get, Post and Raw inputs.
+Read a single request value from the query string, the submitted form
+fields or the JSON request body — with configurable source priority and
+optional validation, behind one small API.
 
-[![Latest Stable Version](http://poser.pugx.org/initphp/input/v)](https://packagist.org/packages/initphp/input) [![Total Downloads](http://poser.pugx.org/initphp/input/downloads)](https://packagist.org/packages/initphp/input) [![Latest Unstable Version](http://poser.pugx.org/initphp/input/v/unstable)](https://packagist.org/packages/initphp/input) [![License](http://poser.pugx.org/initphp/input/license)](https://packagist.org/packages/initphp/input) [![PHP Version Require](http://poser.pugx.org/initphp/input/require/php)](https://packagist.org/packages/initphp/input)
+[![Latest Stable Version](https://poser.pugx.org/initphp/input/v)](https://packagist.org/packages/initphp/input)
+[![Total Downloads](https://poser.pugx.org/initphp/input/downloads)](https://packagist.org/packages/initphp/input)
+[![CI](https://github.com/InitPHP/Input/actions/workflows/ci.yml/badge.svg)](https://github.com/InitPHP/Input/actions/workflows/ci.yml)
+[![License](https://poser.pugx.org/initphp/input/license)](https://packagist.org/packages/initphp/input)
+[![PHP Version Require](https://poser.pugx.org/initphp/input/require/php)](https://packagist.org/packages/initphp/input)
 
+---
+
+## Features
+
+- Three input sources behind one API: `get` (`$_GET`), `post` (`$_POST`)
+  and `raw` (the decoded JSON `php://input` body).
+- Twelve priority helpers (`getPost`, `postRawGet`, …) that read the
+  sources in a defined order — **the first source that contains the key
+  wins**.
+- Per-call validation powered by
+  [initphp/validation](https://github.com/InitPHP/Validation): a value
+  that fails its rules yields the default.
+- A safe JSON body reader: a scalar or malformed payload becomes an empty
+  set instead of a fatal error.
+- A static facade for ergonomic access, plus a fully injectable instance
+  for testing and dependency injection.
+- No shared static state between instances; PHPStan level max clean.
 
 ## Requirements
 
-- PHP 7.2 or later
-- [InitPHP ParameterBag](https://github.com/InitPHP/ParameterBag)
-- [InitPHP Validation](https://github.com/InitPHP/Validation)
+- PHP 8.1 or later
+- [initphp/parameterbag](https://github.com/InitPHP/ParameterBag) `^2.0`
+- [initphp/validation](https://github.com/InitPHP/Validation) `^2.0`
+- `ext-json`
 
 ## Installation
 
-```
+```bash
 composer require initphp/input
 ```
 
-## Usage
+## Quick start
 
-**Example :**
+### With the facade
 
 ```php
-require_once "vendor/autoload.php";
-use \InitPHP\Input\Facade\Inputs as Input;
+require_once 'vendor/autoload.php';
 
+use InitPHP\Input\Facade\Inputs as Input;
+
+// GET /?name=Jane
 // echo isset($_GET['name']) ? $_GET['name'] : 'John';
-echo Input::get('name', 'John');
+echo Input::get('name', 'John'); // 'Jane'
 ```
 
-**Example :**
+### With an instance
 
 ```php
-require_once "vendor/autoload.php";
-use \InitPHP\Input\Facade\Inputs as Input;
+use InitPHP\Input\Inputs;
 
-/**
- * if(isset($_GET['year']) && $_GET['year'] >= 1970 && $_GET['year'] <= 2070){
- *      $year = $_GET['year'];
- * }elseif(isset($_POST['year']) && $_POST['year'] >= 1970 && $_POST['year'] <= 2070){
- *      $year = $_POST['year'];
- * }else{
- *      $year = 2015;
- * }
- */
-$year = Input::getPost('year', 2015, ['range(1970...2070)']);
+$input = new Inputs(); // reads $_GET, $_POST and php://input
+
+$name = $input->get('name', 'John');
 ```
 
-**Example :**
+You can also hand the sources in explicitly — handy in tests or when the
+data does not come from the superglobals:
 
 ```php
-require_once "vendor/autoload.php";
-use \InitPHP\Input\Facade\Inputs as Input;
-
-/**
- * if(isset($_POST['password']) && isset($_POST['password_retype']) && !empty($_POST['password']) && $_POST['password'] == $_POST['password_retype']){
- *      $password = $_POST['password'];
- * }else{
- *      $password = null;
- * }
- */
- 
-$password = Input::post('password', null, ['required', 'again(password_retype)'])
+$input = new Inputs(
+    get: ['name' => 'Jane'],
+    post: ['email' => 'jane@example.com'],
+    raw: ['token' => 'abc123'],
+);
 ```
 
-## Methods
-
-#### `Inputs::get()`
+## Reading from a single source
 
 ```php
-public function get(string $key, mixed $default = null, ?array $validation = null): mixed;
+$input->get('name', 'guest');   // from $_GET
+$input->post('email');          // from $_POST
+$input->raw('token');           // from the JSON request body
 ```
 
-#### `Inputs::post()`
+Each accessor returns the default (second argument, `null` when omitted)
+if the key is absent. Keys are matched **case-sensitively**, just like
+real HTTP query and body parameters.
+
+## Source priority
+
+The priority helpers walk their sources in the order their name reads,
+left to right, and return the value of the **first source that contains
+the key**:
 
 ```php
-public function post(string $key, mixed $default = null, ?array $validation = null): mixed;
+// GET /?year=1999  (no POST, no body)
+$input->getPost('year', 2015); // 1999 — taken from $_GET
+
+// POST year=1999  (no GET)
+$input->getPost('year', 2015); // 1999 — fell through to $_POST
 ```
 
-#### `Inputs::raw()`
+The full set: `getPost`, `getRaw`, `getPostRaw`, `getRawPost`, `postGet`,
+`postRaw`, `postGetRaw`, `postRawGet`, `rawGet`, `rawPost`, `rawGetPost`,
+`rawPostGet`.
 
-Data from reading `php://input`.
+## Validation
+
+Pass a list of [validation rules](https://github.com/InitPHP/Validation)
+as the third argument. When the resolved value fails, the default is
+returned:
 
 ```php
-public function raw(string $key, mixed $default = null, ?array $validation = null): mixed;
+// if year is present and within 1970–2070 use it, otherwise 2015
+$year = $input->getPost('year', 2015, ['range(1970...2070)']);
+
+// required + must equal the password_retype field
+$password = $input->post('password', null, ['required', 'again(password_retype)']);
 ```
 
-### Getting Input with Priority
+> The first source that **owns** the key is the one validated; a present
+> but invalid value returns the default and does **not** fall through to
+> the next source.
 
-#### `Inputs::getPost()`
-
-`$_GET` -> `$_POST`
+## Presence checks
 
 ```php
-public function getPost(string $key, mixed $default = null, ?array $validation = null): mixed;
+$input->hasGet('name');  // isset($_GET['name']) — case-sensitive
+$input->hasPost('email');
+$input->hasRaw('token');
 ```
 
-#### `Inputs::getRaw()`
+## Documentation
 
-`$_GET` -> `php://input`
+Full developer documentation lives in [`docs/`](docs/README.md):
+getting started, each source, the priority model, validation, the
+facade, a complete API reference and an FAQ.
 
-```php
-public function getRaw(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
+## Testing
 
-#### `Inputs::getPostRaw()`
-
-`$_GET` -> `$_POST` -> `php://input`
-
-```php
-public function getPostRaw(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-#### `Inputs::getRawPost()`
-
-`$_GET` -> `php://input` -> `$_POST`
-
-```php
-public function getRawPost(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-#### `Inputs::postGet()`
-
-`$_POST` -> `$_GET`
-
-```php
-public function postGet(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-#### `Inputs::postRaw()`
-
-`$_POST` -> `php://input`
-
-```php
-public function postRaw(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-#### `Inputs::postGetRaw()`
-
-`$_POST` -> `$_GET` -> `php://input`
-
-```php
-public function postGetRaw(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-#### `Inputs::postRawGet()`
-
-`$_POST` -> `php://input` -> `$_GET`
-
-```php
-public function postRawGet(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-#### `Inputs::rawGet()`
-
-`php://input` -> `$_GET`
-
-```php
-public function rawGet(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-#### `Inputs::rawPost()`
-
-`php://input` -> `$_POST`
-
-```php
-public function rawPost(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-#### `Inputs::rawGetPost()`
-
-`php://input` -> `$_GET` -> `$_POST`
-
-```php
-public function rawGetPost(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-#### `Inputs::rawPostGet()`
-
-`php://input` -> `$_POST` -> `$_GET`
-
-```php
-public function rawPostGet(string $key, mixed $default = null, ?array $validation = null): mixed;
-```
-
-### Has it been declared?
-
-Checks to see if the requested entry has been declared.
-
-#### `Inputs::hasGet()`
-
-It does something like `isset($_GET['key'])` , case-insensitively.
-
-```php
-public function hasGet(string $key): bool;
-```
-
-#### `Inputs::hasPost()`
-
-It does something like `isset($_POST['key'])` , case-insensitively.
-
-```php
-public function hasPost(string $key): bool;
-```
-
-#### `Inputs::hasRaw()`
-
-Case-insensitively, it queries the body inputs for a key value.
-
-```php
-public function hasRaw(string $key): bool;
+```bash
+composer test       # PHPUnit
+composer stan       # PHPStan (level max)
+composer cs-check   # PHP-CS-Fixer (dry-run)
+composer ci         # all of the above
 ```
 
 ## Credits
@@ -218,4 +153,4 @@ public function hasRaw(string $key): bool;
 
 ## License
 
-Copyright &copy; 2022 [MIT License](./LICENSE)
+Released under the [MIT License](./LICENSE).

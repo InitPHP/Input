@@ -1,14 +1,14 @@
 <?php
+
 /**
- * Inputs.php
+ * This file is part of the initphp/input package.
  *
- * This file is part of Input.
+ * (c) Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  *
- * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
- * @copyright  Copyright © 2022 Muhammet ŞAFAK
- * @license    ./LICENSE  MIT
- * @version    1.2
- * @link       https://www.muhammetsafak.com.tr
+ * For the full copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
+ *
+ * @link https://github.com/InitPHP/Input
  */
 
 declare(strict_types=1);
@@ -18,217 +18,335 @@ namespace InitPHP\Input;
 use InitPHP\ParameterBag\ParameterBag;
 use InitPHP\Validation\Validation;
 
-class Inputs
+use function file_get_contents;
+use function is_array;
+use function json_decode;
+
+/**
+ * Default {@see InputInterface} implementation.
+ *
+ * Each source is wrapped in its own flat {@see ParameterBag}. By default
+ * the bags are populated from the PHP superglobals (`$_GET`, `$_POST`)
+ * and the JSON request body (`php://input`); every source can instead be
+ * supplied explicitly through the constructor, which makes the class
+ * trivial to unit test without touching global state.
+ *
+ * Unlike a previous design, no state is shared statically between
+ * instances: two `Inputs` objects never interfere with one another.
+ *
+ * @see InputInterface
+ */
+final class Inputs implements InputInterface
 {
+    /**
+     * Source identifier for the query string (`$_GET`).
+     */
+    private const SOURCE_GET = 'get';
 
-    /** @var ParameterBag */
-    private static $get;
+    /**
+     * Source identifier for the submitted form fields (`$_POST`).
+     */
+    private const SOURCE_POST = 'post';
 
-    /** @var ParameterBag */
-    private static $post;
+    /**
+     * Source identifier for the decoded JSON request body.
+     */
+    private const SOURCE_RAW = 'raw';
 
-    /** @var ParameterBag */
-    private static $raw;
+    /**
+     * The per-source parameter bags, keyed by source identifier.
+     *
+     * @var array<string, ParameterBag>
+     */
+    private array $bags;
 
-    /** @var Validation */
-    private static $validation;
+    /**
+     * The validator used to check values against caller-supplied rules.
+     */
+    private Validation $validation;
 
-    public function __construct()
-    {
-        $this->getParameterBagBoot();
-        $this->postParameterBagBoot();
-        $this->rawParameterBagBoot();
-        if(!isset(self::$validation)){
-            self::$validation = new Validation();
-        }
+    /**
+     * @param array<array-key, mixed>|null $get        Query parameters.
+     *                                                 Defaults to `$_GET`.
+     * @param array<array-key, mixed>|null $post       Form parameters.
+     *                                                 Defaults to `$_POST`.
+     * @param array<array-key, mixed>|null $raw        Decoded JSON body.
+     *                                                 Defaults to the
+     *                                                 decoded `php://input`
+     *                                                 payload.
+     * @param Validation|null              $validation Validator instance.
+     *                                                 A fresh one is
+     *                                                 created when omitted.
+     */
+    public function __construct(
+        ?array $get = null,
+        ?array $post = null,
+        ?array $raw = null,
+        ?Validation $validation = null
+    ) {
+        $options = ['isMulti' => false];
+        $this->bags = [
+            self::SOURCE_GET  => new ParameterBag($get ?? $_GET, $options),
+            self::SOURCE_POST => new ParameterBag($post ?? $_POST, $options),
+            self::SOURCE_RAW  => new ParameterBag($raw ?? self::decodeJsonBody(self::readRawInput()), $options),
+        ];
+        $this->validation = $validation ?? new Validation();
     }
 
-    public function __destruct()
+    /**
+     * {@inheritDoc}
+     */
+    public function get(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        if(isset(self::$validation)){
-            self::$validation->clear();
-        }
-        if(isset(self::$get)){
-            self::$get->close();
-        }
-        if(isset(self::$post)){
-            self::$post->close();
-        }
-        if(isset(self::$raw)){
-            self::$raw->close();
-        }
+        return $this->resolve([self::SOURCE_GET], $key, $default, $validation);
     }
 
-
-    public function get(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function post(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        if(!self::$get->has($key)){
-            return $default;
-        }
-        $data = self::$get->get($key, $default);
-        if(empty($validation)){
-            return $data;
-        }
-        return $this->validData(self::$get->all(), $key, $validation) ? $data : $default;
+        return $this->resolve([self::SOURCE_POST], $key, $default, $validation);
     }
 
-    public function post(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function raw(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        if(!self::$post->has($key)){
-            return $default;
-        }
-        $data = self::$post->get($key, $default);
-        if(empty($validation)){
-            return $data;
-        }
-        return $this->validData(self::$post->all(), $key, $validation) ? $data : $default;
+        return $this->resolve([self::SOURCE_RAW], $key, $default, $validation);
     }
 
-    public function raw(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function getPost(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        if(!self::$raw->has($key)){
-            return $default;
-        }
-        $data = self::$raw->get($key, $default);
-        if(empty($validation)){
-            return $data;
-        }
-        return $this->validData(self::$raw->all(), $key, $validation) ? $data : $default;
+        return $this->resolve([self::SOURCE_GET, self::SOURCE_POST], $key, $default, $validation);
     }
 
-    public function getPost(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function getRaw(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        return self::$get->has($key) ? $this->get($key, $default, $validation) : $this->post($key, $default, $validation);
+        return $this->resolve([self::SOURCE_GET, self::SOURCE_RAW], $key, $default, $validation);
     }
 
-    public function getRaw(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function getPostRaw(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        return self::$get->has($key) ? $this->get($key, $default, $validation) : $this->raw($key, $default, $validation);
+        return $this->resolve(
+            [self::SOURCE_GET, self::SOURCE_POST, self::SOURCE_RAW],
+            $key,
+            $default,
+            $validation
+        );
     }
 
-    public function getPostRaw(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function getRawPost(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        if(self::$get->has($key)){
-            return $this->get($key, $default, $validation);
-        }
-        return self::$post->has($key) ? $this->post($key, $default, $validation) : $this->raw($key, $default, $validation);
+        return $this->resolve(
+            [self::SOURCE_GET, self::SOURCE_RAW, self::SOURCE_POST],
+            $key,
+            $default,
+            $validation
+        );
     }
 
-    public function getRawPost(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function postGet(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        if(self::$get->has($key)){
-            return $this->get($key, $default, $validation);
-        }
-        return self::$raw->has($key) ? $this->raw($key, $default, $validation) : $this->post($key, $default, $validation);
+        return $this->resolve([self::SOURCE_POST, self::SOURCE_GET], $key, $default, $validation);
     }
 
-    public function postGet(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function postRaw(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        return self::$post->has($key) ? $this->post($key, $default, $validation) : $this->get($key, $default, $validation);
+        return $this->resolve([self::SOURCE_POST, self::SOURCE_RAW], $key, $default, $validation);
     }
 
-    public function postRaw(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function postGetRaw(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        return self::$post->has($key) ? $this->post($key, $default, $validation) : $this->raw($key, $default, $validation);
+        return $this->resolve(
+            [self::SOURCE_POST, self::SOURCE_GET, self::SOURCE_RAW],
+            $key,
+            $default,
+            $validation
+        );
     }
 
-    public function postGetRaw(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function postRawGet(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        if(self::$post->has($key)){
-            return $this->post($key, $default, $validation);
-        }
-        return self::$get->has($key) ? $this->get($key, $default, $validation) : $this->raw($key, $default, $validation);
+        return $this->resolve(
+            [self::SOURCE_POST, self::SOURCE_RAW, self::SOURCE_GET],
+            $key,
+            $default,
+            $validation
+        );
     }
 
-    public function postRawGet(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function rawGet(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        if(self::$post->has($key)){
-            return $this->post($key, $default, $validation);
-        }
-        return self::$raw->has($key) ? $this->raw($key, $default, $validation) : $this->get($key, $default, $validation);
+        return $this->resolve([self::SOURCE_RAW, self::SOURCE_GET], $key, $default, $validation);
     }
 
-    public function rawGet(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function rawPost(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        return self::$raw->has($key) ? $this->raw($key, $default, $validation) : $this->get($key, $default, $validation);
+        return $this->resolve([self::SOURCE_RAW, self::SOURCE_POST], $key, $default, $validation);
     }
 
-    public function rawPost(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function rawGetPost(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        return self::$raw->has($key) ? $this->raw($key, $default, $validation) : $this->post($key, $default, $validation);
+        return $this->resolve(
+            [self::SOURCE_RAW, self::SOURCE_GET, self::SOURCE_POST],
+            $key,
+            $default,
+            $validation
+        );
     }
 
-    public function rawGetPost(string $key, $default = null, ?array $validation = null)
+    /**
+     * {@inheritDoc}
+     */
+    public function rawPostGet(string $key, mixed $default = null, ?array $validation = null): mixed
     {
-        if(self::$raw->has($key)){
-            return $this->raw($key, $default, $validation);
-        }
-        return self::$get->has($key) ? $this->get($key, $default, $validation) : $this->post($key, $default, $validation);
+        return $this->resolve(
+            [self::SOURCE_RAW, self::SOURCE_POST, self::SOURCE_GET],
+            $key,
+            $default,
+            $validation
+        );
     }
 
-    public function rawPostGet(string $key, $default = null, ?array $validation = null)
-    {
-        if(self::$raw->has($key)){
-            return $this->raw($key, $default, $validation);
-        }
-        return self::$post->has($key) ? $this->post($key, $default, $validation) : $this->get($key, $default, $validation);
-    }
-
+    /**
+     * {@inheritDoc}
+     */
     public function hasGet(string $key): bool
     {
-        return self::$get->has($key);
+        return $this->bags[self::SOURCE_GET]->has($key);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function hasPost(string $key): bool
     {
-        return self::$post->has($key);
+        return $this->bags[self::SOURCE_POST]->has($key);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function hasRaw(string $key): bool
     {
-        return self::$raw->has($key);
+        return $this->bags[self::SOURCE_RAW]->has($key);
     }
 
-    private function validData(array $data, string $key, array $validMethods): bool
+    /**
+     * Walk $sources in order and return the value of the first source
+     * that contains $key.
+     *
+     * Once a source owns the key the lookup stops: when $validation is
+     * supplied and the value fails it, $default is returned rather than
+     * continuing to the next source.
+     *
+     * @param list<string>                     $sources    Ordered source
+     *                                                     identifiers.
+     * @param array<int, string|callable>|null $validation Rules for the
+     *                                                     resolved value.
+     *
+     * @return mixed The resolved value, or $default.
+     */
+    private function resolve(array $sources, string $key, mixed $default, ?array $validation): mixed
     {
-        if(!isset(self::$validation)){
-            self::$validation = new Validation();
+        foreach ($sources as $source) {
+            $bag = $this->bags[$source];
+            if (!$bag->has($key)) {
+                continue;
+            }
+            $value = $bag->get($key, $default);
+            if (empty($validation)) {
+                return $value;
+            }
+
+            return $this->isValid($bag, $key, $validation) ? $value : $default;
         }
-        $validation = self::$validation->setData($data);
-        $validation->rule($key, $validMethods);
-        return $validation->validation() !== FALSE;
+
+        return $default;
     }
 
-    private function getParameterBagBoot()
+    /**
+     * Validate the value stored under $key against $rules, using the
+     * whole bag as the data set so cross-field rules (e.g.
+     * `again(field)`) can resolve their siblings.
+     *
+     * @param array<int, string|callable> $rules
+     */
+    private function isValid(ParameterBag $bag, string $key, array $rules): bool
     {
-        if(isset(self::$get)){
-            return;
+        $data = [];
+        foreach ($bag->all() as $name => $value) {
+            $data[(string) $name] = $value;
         }
-        self::$get = new ParameterBag(!empty($_GET) ? $_GET : [], ['isMulti' => false]);
+        $this->validation->setData($data);
+        $this->validation->rule($key, $rules);
+
+        return $this->validation->validation();
     }
 
-    private function postParameterBagBoot()
+    /**
+     * Decode a raw JSON request body into an input array.
+     *
+     * A body that is empty or whose JSON is not an object/array (a scalar
+     * such as `5`, `"x"` or `true`, or invalid JSON) yields an empty
+     * array, so a scalar payload can never reach the {@see ParameterBag}
+     * constructor (which would raise a TypeError).
+     *
+     * @return array<array-key, mixed>
+     */
+    public static function decodeJsonBody(string $body): array
     {
-        if(isset(self::$post)){
-            return;
+        if ($body === '') {
+            return [];
         }
-        self::$post = new ParameterBag(!empty($_POST) ? $_POST : [], ['isMulti' => false]);
+        $decoded = json_decode($body, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
-    private function rawParameterBagBoot()
+    /**
+     * Read the raw request body from `php://input`, normalising a read
+     * failure to an empty string.
+     */
+    private static function readRawInput(): string
     {
-        if(isset(self::$raw)){
-            return;
-        }
-        $body = @\file_get_contents('php://input');
+        $body = file_get_contents('php://input');
 
-        if ($body === FALSE) {
-            $data = [];
-        } else {
-            $data = \json_decode($body, true);
-        }
-
-        self::$raw = new ParameterBag($data ? $data : [], ['isMulti' => false]);
+        return $body === false ? '' : $body;
     }
-
 }
