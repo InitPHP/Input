@@ -4,6 +4,7 @@ Read a single request value from the query string, the submitted form
 fields or the JSON request body — with configurable source priority and
 optional validation, behind one small API.
 
+[![Designed & Maintained with Tan](https://www.muhammetsafak.com.tr/badges/designed-maintained-with-tan.svg)](https://www.muhammetsafak.com.tr/en/tan/)
 [![Latest Stable Version](https://poser.pugx.org/initphp/input/v)](https://packagist.org/packages/initphp/input)
 [![Total Downloads](https://poser.pugx.org/initphp/input/downloads)](https://packagist.org/packages/initphp/input)
 [![CI](https://github.com/InitPHP/Input/actions/workflows/ci.yml/badge.svg)](https://github.com/InitPHP/Input/actions/workflows/ci.yml)
