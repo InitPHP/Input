@@ -75,7 +75,7 @@ final class ValidationTest extends TestCase
 
         self::assertSame(
             'secret',
-            $input->post('password', null, ['required', 'again(password_retype)'])
+            $input->post('password', null, ['required', 'again(password_retype)']),
         );
     }
 
@@ -87,7 +87,7 @@ final class ValidationTest extends TestCase
         ], []);
 
         self::assertNull(
-            $input->post('password', null, ['required', 'again(password_retype)'])
+            $input->post('password', null, ['required', 'again(password_retype)']),
         );
     }
 
@@ -95,7 +95,7 @@ final class ValidationTest extends TestCase
     {
         $input = new Inputs(['age' => '20'], [], []);
 
-        $even = static fn ($value): bool => is_numeric($value) && (int) $value % 2 === 0;
+        $even = static fn($value): bool => is_numeric($value) && (int) $value % 2 === 0;
 
         self::assertSame('20', $input->get('age', null, [$even]));
     }

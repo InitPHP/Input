@@ -82,7 +82,7 @@ final class Inputs implements InputInterface
         ?array $get = null,
         ?array $post = null,
         ?array $raw = null,
-        ?Validation $validation = null
+        ?Validation $validation = null,
     ) {
         $options = ['isMulti' => false];
         $this->bags = [
@@ -142,7 +142,7 @@ final class Inputs implements InputInterface
             [self::SOURCE_GET, self::SOURCE_POST, self::SOURCE_RAW],
             $key,
             $default,
-            $validation
+            $validation,
         );
     }
 
@@ -155,7 +155,7 @@ final class Inputs implements InputInterface
             [self::SOURCE_GET, self::SOURCE_RAW, self::SOURCE_POST],
             $key,
             $default,
-            $validation
+            $validation,
         );
     }
 
@@ -184,7 +184,7 @@ final class Inputs implements InputInterface
             [self::SOURCE_POST, self::SOURCE_GET, self::SOURCE_RAW],
             $key,
             $default,
-            $validation
+            $validation,
         );
     }
 
@@ -197,7 +197,7 @@ final class Inputs implements InputInterface
             [self::SOURCE_POST, self::SOURCE_RAW, self::SOURCE_GET],
             $key,
             $default,
-            $validation
+            $validation,
         );
     }
 
@@ -226,7 +226,7 @@ final class Inputs implements InputInterface
             [self::SOURCE_RAW, self::SOURCE_GET, self::SOURCE_POST],
             $key,
             $default,
-            $validation
+            $validation,
         );
     }
 
@@ -239,7 +239,7 @@ final class Inputs implements InputInterface
             [self::SOURCE_RAW, self::SOURCE_POST, self::SOURCE_GET],
             $key,
             $default,
-            $validation
+            $validation,
         );
     }
 
