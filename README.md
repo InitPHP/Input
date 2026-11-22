@@ -32,8 +32,8 @@ optional validation, behind one small API.
 ## Requirements
 
 - PHP 8.2 or later
-- [initphp/parameterbag](https://github.com/InitPHP/ParameterBag) `^2.0`
-- [initphp/validation](https://github.com/InitPHP/Validation) `^2.0`
+- [initphp/parameterbag](https://github.com/InitPHP/ParameterBag) `^3.0`
+- [initphp/validation](https://github.com/InitPHP/Validation) `^3.0`
 - `ext-json`
 
 ## Installation
