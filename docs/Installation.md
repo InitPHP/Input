@@ -6,8 +6,8 @@
 | --- | --- |
 | PHP | 8.2 or later |
 | `ext-json` | bundled with PHP |
-| [`initphp/parameterbag`](https://github.com/InitPHP/ParameterBag) | `^2.0` |
-| [`initphp/validation`](https://github.com/InitPHP/Validation) | `^2.0` |
+| [`initphp/parameterbag`](https://github.com/InitPHP/ParameterBag) | `^3.0` |
+| [`initphp/validation`](https://github.com/InitPHP/Validation) | `^3.0` |
 
 The two InitPHP dependencies are installed automatically by Composer.
 

@@ -80,8 +80,8 @@ becomes data; anything else is treated as empty.
 - **Minimum PHP**: 8.2
 - **Required extensions**: `ext-json`
 - **Runtime dependencies**:
-  [`initphp/parameterbag ^2.0`](https://github.com/InitPHP/ParameterBag),
-  [`initphp/validation ^2.0`](https://github.com/InitPHP/Validation)
+  [`initphp/parameterbag ^3.0`](https://github.com/InitPHP/ParameterBag),
+  [`initphp/validation ^3.0`](https://github.com/InitPHP/Validation)
 - **Packagist**: [`initphp/input`](https://packagist.org/packages/initphp/input)
 - **Source**: [github.com/InitPHP/Input](https://github.com/InitPHP/Input)
 - **Issues**: [github.com/InitPHP/Input/issues](https://github.com/InitPHP/Input/issues)
