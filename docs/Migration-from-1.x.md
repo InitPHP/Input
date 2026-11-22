@@ -7,7 +7,7 @@ working unchanged; the breaking changes mostly affect edge cases and direct
 instantiation.
 
 > This page describes the 1.x to 2.0 changes, which raised the PHP floor to
-> 8.1. The development line after 2.0.0 raises it again to PHP 8.2 (see the
+> 8.1. Version 3.0.0 raises it again to PHP 8.2 (see the
 > [CHANGELOG](https://github.com/InitPHP/Input/blob/main/CHANGELOG.md)),
 > so check [Installation](Installation.md) for the current requirement.
 
@@ -29,11 +29,11 @@ instantiation.
 
 ## 1. Bump your PHP and dependencies
 
-Version 2.0 requires **PHP 8.1+** because `initphp/validation ^2.0` does.
+Version 2.0 requires **PHP 8.1+** because `initphp/validation ^2.0` does, and 3.0 raises the floor to **PHP 8.2**.
 Update your environment, then:
 
 ```bash
-composer require initphp/input:^2.0
+composer require initphp/input:^3.0
 ```
 
 ## 2. Keys are now case-sensitive
@@ -105,8 +105,8 @@ and [Migration from 1.x](https://github.com/InitPHP/Validation/wiki/Migration-fr
 
 ## Upgrade checklist
 
-- [ ] PHP runtime is 8.1+
-- [ ] `composer require initphp/input:^2.0`
+- [ ] PHP runtime is 8.2+ (8.1+ on 2.x)
+- [ ] `composer require initphp/input:^3.0`
 - [ ] Audit any case-sensitive key lookups
 - [ ] Remove any code that relied on static cross-instance state
 - [ ] (Optional) switch service type-hints to `InputInterface`
