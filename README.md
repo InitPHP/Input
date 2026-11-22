@@ -135,7 +135,7 @@ $input->hasRaw('token');
 
 ## Documentation
 
-Full developer documentation lives in [`docs/`](docs/README.md):
+Full developer documentation lives in [`docs/`](docs/Home.md):
 getting started, each source, the priority model, validation, the
 facade, a complete API reference and an FAQ.
 
