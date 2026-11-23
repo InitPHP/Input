@@ -60,8 +60,14 @@ Useful for endpoints that take parameters either in the URL or the body.
 use InitPHP\Input\Facade\Inputs as Input;
 
 // Checks $_GET first, then the JSON body.
-$apiKey = Input::getRaw('api_key', null, ['required']);
+$locale = Input::getRaw('locale', null, ['required']);
 ```
+
+Only do this for non-secret parameters such as `locale`, `page` or `sort`. A
+value read from the query string ends up in access logs, browser history and
+`Referer` headers, so credentials such as API keys and tokens belong in the
+`Authorization` header or the request body — read them with
+`raw()` only (see [Source Priority](Source-Priority.md)), never from `$_GET`.
 
 ## A login form
 
