@@ -52,9 +52,14 @@ require_once 'vendor/autoload.php';
 use InitPHP\Input\Facade\Inputs as Input;
 
 // GET /?name=Jane
-// echo isset($_GET['name']) ? $_GET['name'] : 'John';
-echo Input::get('name', 'John'); // 'Jane'
+// $name = isset($_GET['name']) ? $_GET['name'] : 'John';
+$name = Input::get('name', 'John'); // 'Jane'
 ```
+
+> **Security:** `Input` returns request data as-is. Values may be arrays and may
+> contain markup, so escape them for the context they are printed in, for example
+> `htmlspecialchars($name, ENT_QUOTES, 'UTF-8')` inside HTML (after checking
+> `is_string($name)`). Never `echo` a raw `Input` value into a page.
 
 ### With an instance
 

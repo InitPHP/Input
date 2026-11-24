@@ -17,7 +17,11 @@ require __DIR__ . '/vendor/autoload.php';
 use InitPHP\Input\Facade\Inputs as Input;
 
 // GET /?name=Jane
-echo Input::get('name', 'John'); // Jane
+$name = Input::get('name', 'John'); // 'Jane'
+
+// Input returns the request value as-is (it can be an array, or contain markup).
+// Escape it for the context you print it in — here, HTML:
+echo htmlspecialchars(is_string($name) ? $name : 'John', ENT_QUOTES, 'UTF-8');
 ```
 
 ### An instance — explicit and testable
@@ -31,7 +35,10 @@ use InitPHP\Input\Inputs;
 
 $input = new Inputs(); // reads $_GET, $_POST and php://input
 
-echo $input->get('name', 'John');
+$name = $input->get('name', 'John');
+
+// Escape request data before printing it into HTML.
+echo htmlspecialchars(is_string($name) ? $name : 'John', ENT_QUOTES, 'UTF-8');
 ```
 
 Pass the sources in to make the object self-contained (great for tests):
