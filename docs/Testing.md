@@ -109,7 +109,7 @@ composer cs-check   # PHP-CS-Fixer (dry-run)
 composer ci         # all three
 ```
 
-The suite ships at 100% line coverage and is green on PHP 8.2–8.5.
+The suite ships at 100% line coverage and is green on PHP 8.2–8.6.
 
 ## Next
 
