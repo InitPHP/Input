@@ -106,7 +106,7 @@ in multi mode.
 
 ## Which PHP versions are supported?
 
-PHP 8.2 and later. The package is tested on 8.2–8.5 in CI.
+PHP 8.2 and later. The package is tested on 8.2–8.6 in CI.
 
 ## Where do I report a bug or request a feature?
 
